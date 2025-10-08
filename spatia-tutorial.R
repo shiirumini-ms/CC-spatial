@@ -212,3 +212,47 @@ writeRaster(x = ndvi_s2,
             datatype = "INT2S")  # save as integer rather than a float
 
 # Kmeans algorithm to run Unsupervised Classification ----
+
+nr <- getValues(ndvi_s2) # transform Rasterlayer to array 
+str(nr)
+
+set.seed(99) # generates a number 99. Then kmeans chooses the 99th seed
+#              to choose the first set of clusters. 
+#              this ensures the reproducibility of simulation. 
+kmncluster <- kmeans(na.omit(nr), centers = 10, iter.max = 500, nstart = 5, algorithm = "Lloyd")
+# create 10 clusters, start with 5 random sets using Lloyd method, iterate 500 times
+
+str(kmncluster)
+
+# kmncluster$cluster is the categories created 
+# convert this back to raster layer 
+knr <- ndvi_s2
+
+# replace raster cell values with kmncluster$cluster 
+# array
+knr[] <- kmncluster$cluster
+
+str(knr) # 429936 cells 
+str(ndvi_s2) # 429936 cells, matches! 
+
+png('rgb_kmeans.png', width = 10, height = 8, units = "in", res = 300)
+par(mar = c(10.8, 5, 10.8, 2), mfrow = c(1, 2))
+plotRGB(tayRGB, axes = TRUE, stretch = "lin", main = "RGB")
+plot(knr, main = "Kmeans", yaxt = 'n', col = viridis_pal(option = "D")(10))
+dev.off()
+
+# Reducing moorland/bare soil using kmeans, RGB, and NDVI ----
+# kmeans = 1, 2 to be NA, kmeans = 3, 4 probably forests 
+# kmeans = 6 ~ 8 probably farmland 
+m <- cbind(1, 2, NA)
+farmforest <- reclassify(knr, m)
+
+
+png("ndvimasked3.png", width = 10, height = 8, units = "in", res = 300)
+par(mar = c(10.8, 5, 10.8, 2), mfrow = c(1, 2))
+plotRGB(tayRGB, axes = TRUE, stretch = "lin", main = "RGB")
+plot(farmforest, main = "Kmeans", yaxt = 'n', col = viridis_pal(option = "D")(10))
+dev.off()
+
+
+
